@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { StyleSheet, Text, View, Platform, KeyboardAvoidingView } from 'react-native';
-import { GiftedChat } from 'react-native-gifted-chat';
+import { GiftedChat, Bubble } from 'react-native-gifted-chat';
 
 
 export default class Chat extends Component {
@@ -12,26 +12,29 @@ export default class Chat extends Component {
   }
 
   componentDidMount() {
+    // access name prop from Start Screen and set as title in Navigation bar
+    let { name } = this.props.route.params;
+    this.props.navigation.setOptions({ title: name });
     this.setState({
       messages: [
         {
           _id: 1,
-          text: 'Hello developer',
+          text: `Hello, ${this.props.route.params.name}. Welcome to the chat!`,
           createdAt: new Date(),
-          user: {
-            _id: 2,
-            name: 'React Native',
-            avatar: 'https://placeimg.com/140/140/any',
-          },
+          system: true,
         },
         {
           _id: 2,
-          text: this.props.navigation.state.params.name + ' has entered the chat',
+          text: "This is a system message",
           createdAt: new Date(),
-          system: true,
-  },
+          user: {
+            _id: 2,
+            name: "React Native",
+            avatar: "https://placeimg.com/140/140/any",
+          },
+        },
       ],
-    })
+    });
   }
   
   onSend(messages = []) {
