@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
-import { StyleSheet, Text, View, Platform, KeyboardAvoidingView } from 'react-native';
-import { GiftedChat, Bubble } from 'react-native-gifted-chat';
+import { Text, View, Platform, KeyboardAvoidingView } from 'react-native';
+import { GiftedChat, InputToolbar } from 'react-native-gifted-chat';
+import AsyncStorage from '@react-native-community/async-storage';
+import NetInfo from "@react-native-community/netinfo";
 
 //require Firebase and Cloud Firestore
 const firebase = require('firebase');
@@ -14,6 +16,7 @@ export default class Chat extends Component {
       user: {
         _id: "",
         name: "",
+        avatar:""
       },
       loggedInText: "",
     };
@@ -32,64 +35,54 @@ const firebaseConfig = {
     firebase.initializeApp(firebaseConfig);
     }
 
-  this.referenceMessages = firebase.firestore().collection("messages");
-  }
-
-  //authenticates the user, sets the state to sned messages and gets past messages
-  componentDidMount() {
-    this.authUnsubscribe = firebase.auth().onAuthStateChanged(async (user) => {
-      if (!user) {
-        await firebase.auth().signInAnonymously();
-      }
-      //update user state with currently active user data
-      this.setState({
-        _id:  user.uid,
-        name: this.props.route.params.name,
-        loggedInText: 'Hello there',
-        messages: [],
-      });
-    });
-      this.unsubscribe = this.referenceMessages
+this.referenceMessages = firebase.firestore().collection("messages");
+}    
+    
+//authenticates the user, sets the state to sned messages and gets past messages
+componentDidMount() {
+  NetInfo.fetch().then(state => {
+    if (state.isConnected) {
+      this.authUnsubscribe = firebase.auth().onAuthStateChanged(async (user) => {
+        if (!user) {
+          await firebase.auth().signInAnonymously();
+        }
+        //Update user state with currently active user data
+        this.setState({
+          isConnected: true,
+          user: {
+            _id: user.uid,
+            name: this.props.route.params.name,
+            avatar: 'https://placeimg.com/140/140/any'
+          },
+          loggedInText: `${this.props.route.params.name} has entered the chat`,
+          messages: []
+        });
+        this.unsubscribe = this.referenceMessages
         .orderBy("createdAt", "desc")
-        .onSnapshot(this.onCollectionUpdate);
-    };
+        .onSnapshot(this.onCollectionUpdate)
+      });
+    } else {
+      this.setState({
+        isConnected: false
+      });
+      this.getMessages();
+    }
+  });
+};
 
   componentWillUnmount() {
-      this.authUnsubscribe();
-      this.unsubscribe();
+    this.authUnsubscribe();
+    this.unsubscribe();
     }
 
-    onSend(messages = []) {
-      this.setState(
-        (previousState) => ({
-          messages: GiftedChat.append(previousState.messages, messages),
-        }),
-        () => {
-          this.addMessages();
-        });
-    }
 
-    //Updates the messages in the state
-  onCollectionUpdate = (querySnapshot) => {
-    const messages = [];
-    // loop through documents
-    querySnapshot.forEach((doc) => {
-      // get data snapshot
-      const data = doc.data();
-      messages.push({
-        _id: data._id,
-        text: data.text,
-        createdAt: data.createdAt.toDate(),
-        user: {
-          _id: data.user._id,
-          name: data.user.name,
-        },
-      });
-    });
-    this.setState({
-      messages,
-    });
-  };
+onSend(messages = []) {
+  this.setState(previousState => ({
+    messages: GiftedChat.append(previousState.messages, messages),
+  }), () => {
+    this.saveMessages();
+  });
+}
 
   //Pushes messages to Firestore database
   addMessages = () => {
@@ -103,20 +96,87 @@ const firebaseConfig = {
     });
   };
 
-  render() {
-    //Get seleceted background color
-    let bcolor = this.props.route.params.color;
-    //Get selected user name
+//get messages from asyncStorage
+async getMessages() {
+  let messages = '';
+  try {
+    messages = await AsyncStorage.getItem('messages') || [];
+    this.setState({
+      messages: JSON.parse(messages)
+    });
+  } catch (error) {
+    console.log(error.message);
+  }
+};  componentWillUnmount() {
+  this.authUnsubscribe();
+  this.unsubscribe();
+}  
+
+async saveMessages() {
+  try {
+    await AsyncStorage.setItem('messages', JSON.stringify(this.state.messages));
+  } catch (error) {
+    console.log(error.message);
+  }
+}
+
+async deleteMessages() {
+  try {
+    await AsyncStorage.removeItem('messages');
+    this.setState({
+      messages: []
+    })
+  } catch (error) {
+    console.log(error.message);
+  }
+}
+
+   //Updates the messages in the state
+   onCollectionUpdate = (querySnapshot) => {
+    const messages = [];
+    // loop through documents
+    querySnapshot.forEach((doc) => {
+      // get data snapshot
+      const data = doc.data();
+      messages.push({
+        _id: data._id,
+        text: data.text,
+        createdAt: data.createdAt.toDate(),
+        user: {
+          _id: data.user._id,
+          name: data.user.name,
+          avatar: data.user.avatar
+        },
+      });
+    });
+    this.setState({
+      messages,
+    });
+  };
+
+renderInputToolbar(props) {
+  if (this.state.isConnected == false) {
+  } else {
+    return(
+      <InputToolbar
+      {...props}
+      />
+    );
+  }
+}
+render() {
+ 
+    //Get selected username
     let name = this.props.route.params.name;
-    //Set title to usernam
-    this.props.navigation.setOptions({ title: name });
+    //Commented code caused a warning
+    //this.props.navigation.setOptions({ title: name });
 
   return (
     <View
       style={{
         flex: 1,
         //Set background color to selected
-        backgroundColor: bcolor,
+        backgroundColor: this.props.route.params.color,
       }}
     >
       <Text>{this.state.loggedInText}</Text>
@@ -124,8 +184,8 @@ const firebaseConfig = {
         messages={this.state.messages}
         onSend={(messages) => this.onSend(messages)}
         user={this.state.user}
+        renderInputToolbar={this.renderInputToolbar.bind(this)}
       />
     </View>
   );
-}
-}
+}}
