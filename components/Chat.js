@@ -1,8 +1,10 @@
 import React, { Component } from 'react';
-import { Text, View, Platform, KeyboardAvoidingView } from 'react-native';
+import { Text, View, Image } from 'react-native';
 import { GiftedChat, InputToolbar } from 'react-native-gifted-chat';
 import AsyncStorage from '@react-native-community/async-storage';
 import NetInfo from "@react-native-community/netinfo";
+import MapView from 'react-native-maps';
+import CustomActions from './CustomActions.js';
 
 //require Firebase and Cloud Firestore
 const firebase = require('firebase');
@@ -16,20 +18,22 @@ export default class Chat extends Component {
       user: {
         _id: "",
         name: "",
-        avatar:""
+        avatar:"",
       },
       loggedInText: "",
+      image: null,
+      location: null
     };
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCYuTnoyae3TTpOF8eKHIuNTvFOxnI8jww",
-    authDomain: "chatapp-a61ac.firebaseapp.com",
-    projectId: "chatapp-a61ac",
-    storageBucket: "chatapp-a61ac.appspot.com",
-    messagingSenderId: "544735696816",
-    appId: "1:544735696816:web:bc4588b29d5587d4d6a875",
-    measurementId: "G-PYM6WPVV34",
-  }
+    var firebaseConfig = {
+      apiKey: "AIzaSyCYuTnoyae3TTpOF8eKHIuNTvFOxnI8jww",
+      authDomain: "chatapp-a61ac.firebaseapp.com",
+      projectId: "chatapp-a61ac",
+      storageBucket: "chatapp-a61ac.appspot.com",
+      messagingSenderId: "544735696816",
+      appId: "1:544735696816:web:bc4588b29d5587d4d6a875",
+      measurementId: "G-PYM6WPVV34"
+    };
 
   if (!firebase.apps.length){
     firebase.initializeApp(firebaseConfig);
@@ -38,7 +42,7 @@ const firebaseConfig = {
 this.referenceMessages = firebase.firestore().collection("messages");
 }    
     
-//authenticates the user, sets the state to sned messages and gets past messages
+//authenticates  user, sets the state to send and receive
 componentDidMount() {
   NetInfo.fetch().then(state => {
     if (state.isConnected) {
@@ -80,11 +84,12 @@ onSend(messages = []) {
   this.setState(previousState => ({
     messages: GiftedChat.append(previousState.messages, messages),
   }), () => {
+    this.addMessages();
     this.saveMessages();
   });
 }
 
-  //Pushes messages to Firestore database
+  //Sends messages to Firestore database
   addMessages = () => {
     const message = this.state.messages[0];
     this.referenceMessages.add({
@@ -93,6 +98,8 @@ onSend(messages = []) {
       createdAt: message.createdAt,
       user: message.user,
       sent: true,
+      image: message.image || null,
+      location: message.location || null,
     });
   };
 
@@ -131,28 +138,29 @@ async deleteMessages() {
   }
 }
 
-   //Updates the messages in the state
-   onCollectionUpdate = (querySnapshot) => {
-    const messages = [];
-    // loop through documents
-    querySnapshot.forEach((doc) => {
-      // get data snapshot
-      const data = doc.data();
-      messages.push({
-        _id: data._id,
-        text: data.text,
-        createdAt: data.createdAt.toDate(),
-        user: {
-          _id: data.user._id,
-          name: data.user.name,
-          avatar: data.user.avatar
-        },
-      });
+onCollectionUpdate = (querySnapshot) => {
+  const messages = [];
+  // loop through documents
+  querySnapshot.forEach((doc) => {
+    // get data snapshot
+    const data = doc.data();
+    messages.push({
+      _id: data._id,
+      text: data.text.toString(),
+      createdAt: data.createdAt.toDate(),
+      user: {
+        _id: data.user._id,
+        name: data.user.name,
+        avatar: data.user.avatar,
+      },
+      image: data.image || '',
+      location: data.location || '',
     });
-    this.setState({
-      messages,
-    });
-  };
+  });
+  this.setState({
+    messages,
+  });
+};
 
 renderInputToolbar(props) {
   if (this.state.isConnected == false) {
@@ -164,9 +172,34 @@ renderInputToolbar(props) {
     );
   }
 }
+
+
+renderCustomActions = (props) => {
+  return <CustomActions {...props} />;
+}
+
+renderCustomView(props) {
+  const { currentMessage } = props;
+  if (currentMessage.location) {
+    return (
+      <View>
+        <MapView
+          style={{ width: 150, height: 100, borderRadius: 13, margin: 3 }}
+          region={{
+            latitude: currentMessage.location.latitude,
+            longitude: currentMessage.location.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421
+          }}
+        />
+      </View>
+    );
+  }
+  return null;
+}
+
 render() {
  
-    //Get selected username
     let name = this.props.route.params.name;
     //Commented code caused a warning
     //this.props.navigation.setOptions({ title: name });
@@ -177,15 +210,24 @@ render() {
         flex: 1,
         //Set background color to selected
         backgroundColor: this.props.route.params.color,
+        justifyContent: 'center'
       }}
     >
+
       <Text>{this.state.loggedInText}</Text>
+      {this.state.image && 
+        <Image source={{uri: this.state.image.uri}} style={{width: 200, height: 200}} />
+      }
       <GiftedChat
+        renderCustomView={this.renderCustomView}
+        renderActions={this.renderCustomActions}
         messages={this.state.messages}
         onSend={(messages) => this.onSend(messages)}
+        image={this.state.image}
         user={this.state.user}
         renderInputToolbar={this.renderInputToolbar.bind(this)}
       />
     </View>
   );
-}}
+}
+}
