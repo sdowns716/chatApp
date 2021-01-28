@@ -25,7 +25,7 @@ export default class Chat extends Component {
       location: null
     };
 
-    var firebaseConfig = {
+    const firebaseConfig = {
       apiKey: "AIzaSyCYuTnoyae3TTpOF8eKHIuNTvFOxnI8jww",
       authDomain: "chatapp-a61ac.firebaseapp.com",
       projectId: "chatapp-a61ac",
@@ -80,7 +80,7 @@ componentDidMount() {
     }
 
 
-onSend(messages = []) {
+onSend = (messages = []) => {
   this.setState(previousState => ({
     messages: GiftedChat.append(previousState.messages, messages),
   }), () => {
@@ -90,7 +90,7 @@ onSend(messages = []) {
 }
 
   //Sends messages to Firestore database
-  addMessages = () => {
+  addMessages = async = () => {
     const message = this.state.messages[0];
     this.referenceMessages.add({
       _id: message._id,
@@ -104,22 +104,24 @@ onSend(messages = []) {
   };
 
 //get messages from asyncStorage
-async getMessages() {
+getMessages = async () => {
   let messages = '';
   try {
-    messages = await AsyncStorage.getItem('messages') || [];
+    messages = (await AsyncStorage.getItem('messages')) || [];
     this.setState({
       messages: JSON.parse(messages)
     });
   } catch (error) {
     console.log(error.message);
   }
-};  componentWillUnmount() {
+};  
+
+componentWillUnmount() {
   this.authUnsubscribe();
   this.unsubscribe();
 }  
 
-async saveMessages() {
+saveMessages = async () => {
   try {
     await AsyncStorage.setItem('messages', JSON.stringify(this.state.messages));
   } catch (error) {
@@ -127,7 +129,7 @@ async saveMessages() {
   }
 }
 
-async deleteMessages() {
+deleteMessages = async() => {
   try {
     await AsyncStorage.removeItem('messages');
     this.setState({
@@ -138,10 +140,10 @@ async deleteMessages() {
   }
 }
 
-onCollectionUpdate = (querySnapshot) => {
+onCollectionUpdate = querySnapshot => {
   const messages = [];
   // loop through documents
-  querySnapshot.forEach((doc) => {
+  querySnapshot.forEach(doc => {
     // get data snapshot
     const data = doc.data();
     messages.push({
@@ -158,11 +160,11 @@ onCollectionUpdate = (querySnapshot) => {
     });
   });
   this.setState({
-    messages,
+    messages
   });
 };
 
-renderInputToolbar(props) {
+renderInputToolbar = (props) => {
   if (this.state.isConnected == false) {
   } else {
     return(
@@ -178,7 +180,7 @@ renderCustomActions = (props) => {
   return <CustomActions {...props} />;
 }
 
-renderCustomView(props) {
+renderCustomView = (props) => {
   const { currentMessage } = props;
   if (currentMessage.location) {
     return (

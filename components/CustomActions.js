@@ -23,8 +23,8 @@ export default class CustomActions extends React.Component {
       try {
         const imageUrlLink = await this.uploadImage(result.uri);
         this.props.onSend({image: imageUrlLink});
-    } catch (err) {
-        console.log(err);
+    } catch (error) {
+        console.log(error.message);
     }
 }
 }
@@ -52,6 +52,7 @@ takePhoto = async () => {
 
 //image uploads from device
 uploadImage = async (uri) => {
+  try {
   const blob = await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.onload = (() => {
@@ -68,11 +69,20 @@ uploadImage = async (uri) => {
 
   const getImageName = uri.split('/');
   const imageArrayLength = getImageName.length - 1;
-  const ref = firebase.storage().ref().child(getImageName[imageArrayLength]);
+
+  const ref = firebase
+  .storage()
+  .ref()
+  .child(`${imageArrayLength}`);
+  
   console.log(ref, getImageName[imageArrayLength]);
   const snapshot = await ref.put(blob);
 
   blob.close();
+  } catch (error) {
+    console.log(error.message);
+  }
+
 
 // spitting out image url
   const imageURL = await snapshot.ref.getDownloadURL();
@@ -124,7 +134,7 @@ onActionPress = () => {
       }
     }
   );
-  }
+  };
 
   render() {
     return (
