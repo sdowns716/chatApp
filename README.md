@@ -16,6 +16,7 @@ $ expo start
 
 #### Download the following dependencies
 
+```
 "@react-native-community/async-storage"
     "@react-native-community/masked-view"
     "@react-native-community/netinfo"
@@ -39,6 +40,7 @@ $ expo start
     "expo-image-picker"
     "expo-location"
     "react-native-maps"
+    ```
 
 #### Setting up the Database Google Firestore database was used for this app.
 
@@ -50,4 +52,4 @@ $ expo start
 6.  Select "database" then “Create database” in the Cloud Firestore section.
 
 
-See my Kanban board [ora.pm]{https://ora.pm/project/283557/kanban}
+[Kanban board] (https://ora.pm/project/283557/kanban)
